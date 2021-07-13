@@ -7,20 +7,21 @@
 # Copyright (C) 2008 Gary van der Merwe
 # Copyright (C) 2008 Hendrik van Antwerpen
 # Copyright (C) 2008 ojnkpjg
-# Copyright (C) 2008-2011, 2014, 2018-2020 Philipp Wolfer
+# Copyright (C) 2008-2011, 2014, 2018-2021 Philipp Wolfer
 # Copyright (C) 2009 Nikolai Prokoschenko
 # Copyright (C) 2011-2012 Chad Wilson
 # Copyright (C) 2011-2013, 2019 Michael Wiencek
 # Copyright (C) 2012-2013, 2016-2017 Wieland Hoffmann
 # Copyright (C) 2013, 2018 Calvin Walton
 # Copyright (C) 2013-2015, 2017 Sophist-UK
-# Copyright (C) 2013-2015, 2017-2019 Laurent Monin
+# Copyright (C) 2013-2015, 2017-2021 Laurent Monin
 # Copyright (C) 2016 Suhas
 # Copyright (C) 2016-2018 Sambhav Kothari
 # Copyright (C) 2017 Antonio Larrosa
 # Copyright (C) 2018 Vishal Choudhary
 # Copyright (C) 2019 Joel Lintunen
 # Copyright (C) 2020 Gabriel Ferreira
+# Copyright (C) 2021 Petit Minion
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -112,7 +113,6 @@ class AlbumArtist(DataObject):
 class Album(DataObject, Item):
 
     metadata_images_changed = QtCore.pyqtSignal()
-    release_group_loaded = QtCore.pyqtSignal()
 
     def __init__(self, album_id, discid=None):
         DataObject.__init__(self, album_id)
@@ -659,29 +659,18 @@ class Album(DataObject, Item):
                     if track.is_linked():
                         linked_tracks += 1
 
-                text = '%s\u200E (%d/%d' % (title, linked_tracks, len(self.tracks))
+                elems = ['%d/%d' % (linked_tracks, len(self.tracks))]
                 unmatched = self.get_num_unmatched_files()
                 if unmatched:
-                    text += '; %d?' % (unmatched,)
+                    elems.append('%d?' % (unmatched,))
                 unsaved = self.get_num_unsaved_files()
                 if unsaved:
-                    text += '; %d*' % (unsaved,)
-                # CoverArt.set_metadata uses the orig_metadata.images if metadata.images is empty
-                # in order to show existing cover art if there's no cover art for a release. So
-                # we do the same here in order to show the number of images consistently.
-                if self.metadata.images:
-                    metadata = self.metadata
-                else:
-                    metadata = self.orig_metadata
+                    elems.append('%d*' % (unsaved,))
+                ca_detailed = self.cover_art_description_detailed()
+                if ca_detailed:
+                    elems.append(ca_detailed)
 
-                number_of_images = len(metadata.images)
-                if getattr(metadata, 'has_common_images', True):
-                    text += ngettext("; %i image", "; %i images",
-                                     number_of_images) % number_of_images
-                else:
-                    text += ngettext("; %i image not in all tracks", "; %i different images among tracks",
-                                     number_of_images) % number_of_images
-                return text + ')'
+                return '%s\u200E (%s)' % (title, '; '.join(elems))
             else:
                 return title
         elif column == '~length':
@@ -696,6 +685,8 @@ class Album(DataObject, Item):
             return self.metadata['~totalalbumtracks']
         elif column == 'discnumber':
             return self.metadata['totaldiscs']
+        elif column == 'covercount':
+            return self.cover_art_description()
         else:
             return self.metadata[column]
 

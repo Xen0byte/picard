@@ -11,7 +11,7 @@
 # Copyright (C) 2011 Wieland Hoffmann
 # Copyright (C) 2011-2013 Michael Wiencek
 # Copyright (C) 2014, 2017 Sophist-UK
-# Copyright (C) 2014-2015, 2018-2019 Laurent Monin
+# Copyright (C) 2014-2015, 2018-2021 Laurent Monin
 # Copyright (C) 2016 Mark Trolley
 # Copyright (C) 2016 Rahul Raturi
 # Copyright (C) 2016 Suhas
@@ -20,6 +20,8 @@
 # Copyright (C) 2018 Calvin Walton
 # Copyright (C) 2018 Vishal Choudhary
 # Copyright (C) 2019 Joel Lintunen
+# Copyright (C) 2020 Adam James
+# Copyright (C) 2021 Petit Minion
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -66,6 +68,7 @@ from picard.script import (
     ScriptParser,
     enabled_tagger_scripts_texts,
 )
+from picard.util import pattern_as_regex
 from picard.util.imagelist import (
     add_metadata_images,
     remove_metadata_images,
@@ -94,23 +97,12 @@ class TagGenreFilter:
                 remain = line[1:].strip()
                 if not remain:
                     continue
-                if len(remain) > 2 and remain[0] == '/' and remain[-1] == '/':
-                    remain = remain[1:-1]
-                    try:
-                        regex_search = re.compile(remain, re.IGNORECASE)
-                    except Exception as e:
-                        log.error("Failed to compile regex /%s/: %s", remain, e)
-                        self.errors[lineno] = str(e)
-                        regex_search = None
-                else:
-                    # FIXME?: only support '*' (not '?' or '[abc]')
-                    # replace multiple '*' by one
-                    star = re.escape('*')
-                    remain = re.sub(star + '+', '*', remain)
-                    regex = '.*'.join([re.escape(x) for x in remain.split('*')])
-                    regex_search = re.compile('^' + regex + '$', re.IGNORECASE)
-                if regex_search:
+                try:
+                    regex_search = pattern_as_regex(remain, allow_wildcards=True, flags=re.IGNORECASE)
                     self.match_regexes[_list].append(regex_search)
+                except re.error as e:
+                    log.error("Failed to compile regex /%s/: %s", remain, e)
+                    self.errors[lineno] = str(e)
 
     def skip(self, tag):
         if not self.match_regexes:
@@ -248,6 +240,8 @@ class Track(DataObject, FileListItem):
         if column == 'title':
             prefix = "%s-" % m['discnumber'] if m['discnumber'] and m['totaldiscs'] != "1" else ""
             return "%s%s  %s" % (prefix, m['tracknumber'].zfill(2), m['title'])
+        elif column == 'covercount':
+            return self.cover_art_description()
         elif column in m:
             return m[column]
         elif self.num_linked_files == 1:

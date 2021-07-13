@@ -7,7 +7,7 @@
 # Copyright (C) 2007-2011, 2014, 2018-2021 Philipp Wolfer
 # Copyright (C) 2011 Michael Wiencek
 # Copyright (C) 2011-2012, 2015 Wieland Hoffmann
-# Copyright (C) 2013-2015, 2018-2019 Laurent Monin
+# Copyright (C) 2013-2015, 2018-2021 Laurent Monin
 # Copyright (C) 2016 Ville Skyttä
 # Copyright (C) 2016-2018 Sambhav Kothari
 # Copyright (C) 2017 Antonio Larrosa
@@ -64,7 +64,7 @@ class DataHash:
         self._filename = None
         _datafile_mutex.lock()
         try:
-            m = md5()
+            m = md5()  # nosec
             m.update(data)
             self._hash = m.hexdigest()
             if self._hash not in _datafiles:
@@ -337,7 +337,8 @@ class CoverArtImage:
             except OSError as e:
                 raise CoverArtImageIOError(e)
 
-    def _next_filename(self, filename, counters):
+    @staticmethod
+    def _next_filename(filename, counters):
         if counters[filename]:
             new_filename = "%s (%d)" % (decode_filename(filename), counters[filename])
         else:

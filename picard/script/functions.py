@@ -4,21 +4,22 @@
 #
 # Copyright (C) 2006-2009, 2012 Lukáš Lalinský
 # Copyright (C) 2007 Javier Kohen
-# Copyright (C) 2008-2011, 2014-2015, 2018-2020 Philipp Wolfer
+# Copyright (C) 2008-2011, 2014-2015, 2018-2021 Philipp Wolfer
 # Copyright (C) 2009 Carlin Mangar
 # Copyright (C) 2009 Nikolai Prokoschenko
 # Copyright (C) 2011-2012 Michael Wiencek
 # Copyright (C) 2012 Chad Wilson
 # Copyright (C) 2012 stephen
-# Copyright (C) 2012, 2014, 2017 Wieland Hoffmann
-# Copyright (C) 2013-2014, 2017-2020 Laurent Monin
-# Copyright (C) 2014, 2017 Sophist-UK
+# Copyright (C) 2012, 2014, 2017, 2021 Wieland Hoffmann
+# Copyright (C) 2013-2014, 2017-2021 Laurent Monin
+# Copyright (C) 2014, 2017, 2021 Sophist-UK
 # Copyright (C) 2016-2017 Sambhav Kothari
 # Copyright (C) 2016-2017 Ville Skyttä
 # Copyright (C) 2017-2018 Antonio Larrosa
 # Copyright (C) 2018 Calvin Walton
 # Copyright (C) 2018 virusMac
-# Copyright (C) 2020 Bob Swift
+# Copyright (C) 2020-2021 Bob Swift
+# Copyright (C) 2021 Adam James
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -34,6 +35,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+
 from collections import namedtuple
 import datetime
 from functools import reduce
@@ -42,6 +44,7 @@ import operator
 import re
 import unicodedata
 
+from picard.const.countries import RELEASE_COUNTRIES
 from picard.metadata import MULTI_VALUED_JOINER
 from picard.script.parser import (
     MultiValue,
@@ -49,7 +52,10 @@ from picard.script.parser import (
     ScriptRuntimeError,
     normalize_tagname,
 )
-from picard.util import uniqify
+from picard.util import (
+    pattern_as_regex,
+    uniqify,
+)
 
 
 try:
@@ -758,14 +764,23 @@ def func_lenmulti(parser, multi, separator=MULTI_VALUED_JOINER):
     """`$performer(pattern="",join=", ")`
 
 Returns the performers where the performance type (e.g. "vocal") matches `pattern`, joined by `join`.
+You can specify a regular expression in the format `/pattern/flags`. `flags` are optional. Currently
+the only supported flag is "i" (ignore case). For example `$performer(/^guitars?$/i)` matches the
+performance type "guitar" or "Guitars", but not e.g. "bass guitar".
 
 _Since Picard 0.10_"""
 ))
 def func_performer(parser, pattern="", join=", "):
     values = []
+    try:
+        regex = pattern_as_regex(pattern, allow_wildcards=False)
+    except re.error:
+        return ''
     for name, value in parser.context.items():
-        if name.startswith("performer:") and pattern in name:
-            values.append(value)
+        if name.startswith("performer:"):
+            name, performance = name.split(':', 2)
+            if regex.search(performance):
+                values.append(value)
     return join.join(values)
 
 
@@ -1173,7 +1188,7 @@ def func_foreach(parser, multi, loop_code, separator=MULTI_VALUED_JOINER):
 Standard 'while' loop. Executes `code` repeatedly until `condition` no longer
     evaluates to `True`. For each loop, the count is stored in the tag
     `_loop_count`. This allows the count value to be accessed within the `code`
-    script. The function limites the maximum number of iterations to 1000 as a
+    script. The function limits the maximum number of iterations to 1000 as a
     safeguard against accidentally creating an infinite loop."""
 ))
 def func_while(parser, condition, loop_code):
@@ -1352,3 +1367,17 @@ def func_unique(parser, multi, case_sensitive="", separator=MULTI_VALUED_JOINER)
     if not case_sensitive:
         multi_value._multi = list({v.lower(): v for v in multi_value}.values())
     return multi_value.separator.join(sorted(set(multi_value)))
+
+
+@script_function(documentation=N_(
+    """`$countryname(country_code, translate="")`
+
+Returns the name of the country for the specified country code.  If the country code is invalid an empty string will be returned.
+If translate is not blank, the output will be translated into the current locale language.
+"""
+))
+def func_countryname(parser, country_code, translate=""):
+    name = RELEASE_COUNTRIES.get(country_code.strip().upper(), "")
+    if translate:
+        return gettext_countries(name)
+    return name

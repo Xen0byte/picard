@@ -3,10 +3,10 @@
 # Picard, the next-generation MusicBrainz tagger
 #
 # Copyright (C) 2006-2007 Lukáš Lalinský
-# Copyright (C) 2009, 2018-2019, 2021 Philipp Wolfer
+# Copyright (C) 2009, 2018-2021 Philipp Wolfer
 # Copyright (C) 2011-2013 Michael Wiencek
 # Copyright (C) 2012 Chad Wilson
-# Copyright (C) 2013-2014, 2018 Laurent Monin
+# Copyright (C) 2013-2014, 2018, 2020 Laurent Monin
 # Copyright (C) 2014 Sophist-UK
 # Copyright (C) 2016-2017 Sambhav Kothari
 # Copyright (C) 2018 Vishal Choudhary
@@ -53,7 +53,6 @@ from picard.ui.ui_cdlookup import Ui_Dialog
 
 class CDLookupDialog(PicardDialog):
 
-    autorestore = False
     dialog_header_state = "cdlookupdialog_header_state"
 
     options = [
@@ -107,7 +106,6 @@ class CDLookupDialog(PicardDialog):
             self.ui.results_view.setCurrentIndex(1)
         self.ui.lookup_button.clicked.connect(self.lookup)
         self.ui.submit_button.clicked.connect(self.lookup)
-        self.restore_geometry()
         self.restore_header_state()
         self.finished.connect(self.save_header_state)
 

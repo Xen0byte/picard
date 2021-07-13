@@ -3,8 +3,8 @@
 # Picard, the next-generation MusicBrainz tagger
 #
 # Copyright (C) 2006 Lukáš Lalinský
-# Copyright (C) 2013, 2020 Philipp Wolfer
-# Copyright (C) 2013, 2018 Laurent Monin
+# Copyright (C) 2013, 2018, 2020 Laurent Monin
+# Copyright (C) 2013, 2020-2021 Philipp Wolfer
 # Copyright (C) 2016-2017 Sambhav Kothari
 #
 # This program is free software; you can redistribute it and/or
@@ -99,13 +99,7 @@ class NetworkOptionsPage(OptionsPage):
         config.setting["browser_integration_port"] = self.ui.browser_integration_port.value()
         config.setting["browser_integration_localhost_only"] = \
             self.ui.browser_integration_localhost_only.isChecked()
-        self.update_browser_integration()
-
-    def update_browser_integration(self):
-        if self.ui.browser_integration.isChecked():
-            self.tagger.browser_integration.start()
-        else:
-            self.tagger.browser_integration.stop()
+        self.tagger.update_browser_integration()
 
 
 register_options_page(NetworkOptionsPage)
